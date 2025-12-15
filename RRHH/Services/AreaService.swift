@@ -6,4 +6,48 @@
 //  Copyright © 2025 Los malditos de cibertec. All rights reserved.
 //
 
-import Foundation
+import FirebaseFirestore
+
+class AreaService {
+    private let db = Firestore.firestore()
+    private let collection = "areas"
+
+    func agregarArea(_ area: Area, completion: @escaping (Error?) -> Void) {
+        do {
+            try db.collection(collection)
+                .document(area.id)
+                .setData(from: area, merge: true, completion: completion)
+        } catch let error {
+            completion(error)
+        }
+    }
+
+    func obtenerAreas(completion: @escaping ([Area]?, Error?) -> Void) {
+        db.collection(collection).getDocuments { snapshot, error in
+            if let error = error {
+                completion(nil, error)
+            } else {
+                let areas = snapshot?.documents.compactMap { doc -> Area? in
+                    try? doc.data(as: Area.self)
+                }
+                completion(areas, nil)
+            }
+        }
+    }
+
+    func actualizarArea(_ area: Area, completion: @escaping (Error?) -> Void) {
+        do {
+            try db.collection(collection)
+                .document(area.id)
+                .setData(from: area, merge: true, completion: completion)
+        } catch let error {
+            completion(error)
+        }
+    }
+    
+    func eliminarArea(_ area: Area, completion: @escaping (Error?) -> Void) {
+        db.collection(collection).document(area.id).delete { error in
+            completion(error)
+        }
+    }
+}

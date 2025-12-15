@@ -117,7 +117,7 @@
                 ))
                 
                 stack.addArrangedSubview(crearModulo(
-                    titulo: "Datos del Empleado",
+                    titulo: "Usuarios",
                     detalle: "Información personal y laboral",
                     icono: "person.crop.circle",
                     color: .systemGray,

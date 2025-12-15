@@ -8,21 +8,21 @@ class LoginViewController: UIViewController {
     private var queuePlayer: AVQueuePlayer?
     private var playerLooper: AVPlayerLooper?
     private var playerLayer: AVPlayerLayer?
-
-    // MARK: - Credenciales válidas
-    private let validUser = "Admin"
-    private let validPassword = "1234"
+    
+    // MARK: - Servicio
+    private let usuarioService = UsuarioService()
 
     // MARK: - UI
     private let usuarioTextField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Usuario"
+        tf.placeholder = "Correo"
         tf.textColor = .white
         tf.backgroundColor = UIColor.white.withAlphaComponent(0.1)
         tf.layer.cornerRadius = 10
         tf.borderStyle = .none
         tf.setLeftPaddingPoints(10)
         tf.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        tf.autocapitalizationType = .none
         return tf
     }()
 
@@ -36,6 +36,7 @@ class LoginViewController: UIViewController {
         tf.borderStyle = .none
         tf.setLeftPaddingPoints(10)
         tf.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        tf.autocapitalizationType = .none
         return tf
     }()
 
@@ -148,22 +149,25 @@ class LoginViewController: UIViewController {
 
     // MARK: - Login
     @objc private func didTapLogin() {
-        let user = usuarioTextField.text ?? ""
-        let pass = passwordTextField.text ?? ""
+        let email = usuarioTextField.text ?? ""
+        let password = passwordTextField.text ?? ""
 
         // Validar campos vacíos
-        if user.isEmpty || pass.isEmpty {
+        if email.isEmpty || password.isEmpty {
             mostrarAlerta(titulo: "Faltan datos",
-                          mensaje: "Ingresa usuario y contraseña.")
+                        mensaje: "Ingresa correo y contraseña.")
             return
         }
-
-        // Comparar con usuario/clave válidos
-        if user == validUser && pass == validPassword {
-            irAHOME()
-        } else {
-            mostrarAlerta(titulo: "Error",
-                          mensaje: "Usuario o contraseña incorrectos.")
+        
+        // Logeo con firebase
+        usuarioService.validarUsuario(email: email, password: password) { [weak self] usuario, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    self?.mostrarAlerta(titulo: "Error", mensaje: error.localizedDescription)
+                } else {
+                    self?.irAHOME()
+                }
+            }
         }
     }
 

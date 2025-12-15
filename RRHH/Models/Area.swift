@@ -7,3 +7,8 @@
 //
 
 import Foundation
+
+struct Area: Identifiable, Codable {
+    let id: String
+    var descripcion: String
+}

@@ -1,243 +1,210 @@
 import UIKit
 
-class DatosEmpleadoViewController: UIViewController {
+class DatosEmpleadoViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
 
+    private let nombreTextField = UITextField()
+    private let agregarButton = UIButton(type: .system)
+    private let tableView = UITableView()
+    
+    private var usuarios: [Usuario] = []
+    private let usuarioService = UsuarioService()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        view.backgroundColor = .systemBackground
-        title = "Datos del Empleado"
+        
+        view.backgroundColor = .systemGroupedBackground
+        title = "Listado de Usuarios"
         configurarBotonAtras()
         setupUI()
+        configurarTableView()
+        cargarUsuarios()
     }
-
-     override func viewWillAppear(_ animated: Bool) {
-              super.viewWillAppear(animated)
-              navigationController?.setNavigationBarHidden(false, animated: true)
-          }
-          
-          private func configurarBotonAtras(){
-              let backButton = UIBarButtonItem(
-                  image: UIImage(systemName:"chevron.left"),
-                  style: .plain,
-                  target: self,
-                  action: #selector(volverAtras)
-              )
-              backButton.title = "Atras"
-              navigationItem.leftBarButtonItem = backButton
-          }
-          @objc private func volverAtras(){
-              navigationController?.popViewController(animated: true)
-          }
-       
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(false, animated: true)
+        tableView.reloadData()
+    }
+    
+    // MARK: - Cargar usuarios desde UsuarioService
+    private func cargarUsuarios() {
+        usuarioService.obtenerUsuarios { [weak self] usuariosObtenidos, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    let alert = UIAlertController(title: "Error", message: "No se pudieron cargar los usuarios: \(error.localizedDescription)", preferredStyle: .alert)
+                    alert.addAction(UIAlertAction(title: "OK", style: .default))
+                    self?.present(alert, animated: true)
+                    return
+                }
+                
+                self?.usuarios = usuariosObtenidos ?? []
+                self?.tableView.reloadData()
+            }
+        }
+    }
+    
+    // MARK: - Navegación
+    private func configurarBotonAtras() {
+        let backButton = UIBarButtonItem(
+            image: UIImage(systemName: "chevron.left"),
+            style: .plain,
+            target: self,
+            action: #selector(volverAtras)
+        )
+        backButton.title = "Atrás"
+        navigationItem.leftBarButtonItem = backButton
+    }
+    
+    @objc private func volverAtras() {
+        navigationController?.popViewController(animated: true)
+    }
+    
+    // MARK: - UI
     private func setupUI() {
-        let scrollView = UIScrollView()
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(scrollView)
-
+        // Stack vertical
+        let stack = UIStackView(arrangedSubviews: [agregarButton, tableView])
+        stack.axis = .vertical
+        stack.spacing = 16
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(stack)
+        
+        // --- Botón Agregar Usuario ---
+        agregarButton.setTitle("Agregar usuario", for: .normal)
+        agregarButton.setImage(UIImage(systemName: "plus"), for: .normal)
+        agregarButton.tintColor = .white
+        agregarButton.backgroundColor = .systemBlue
+        agregarButton.layer.cornerRadius = 10
+        agregarButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        agregarButton.contentEdgeInsets = UIEdgeInsets(top: 10, left: 16, bottom: 10, right: 16)
+        agregarButton.setTitleColor(.white, for: .normal)
+        agregarButton.addTarget(self, action: #selector(agregarUsuario), for: .touchUpInside)
+        
+        // --- Tabla de Usuarios ---
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.layer.cornerRadius = 14
+        tableView.isScrollEnabled = true
+        tableView.tableFooterView = UIView()
+        
+        // --- Constraints ---
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
-        let contentView = UIView()
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.addSubview(contentView)
-
-        NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
-        ])
-
-        // Tarjeta de perfil
-        let profileCard = UIView()
-        profileCard.backgroundColor = .secondarySystemGroupedBackground
-        profileCard.layer.cornerRadius = 18
-        profileCard.layer.shadowColor = UIColor.black.cgColor
-        profileCard.layer.shadowOpacity = 0.08
-        profileCard.layer.shadowOffset = CGSize(width: 0, height: 3)
-        profileCard.layer.shadowRadius = 6
-        profileCard.translatesAutoresizingMaskIntoConstraints = false
-
-        contentView.addSubview(profileCard)
-
-        NSLayoutConstraint.activate([
-            profileCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
-            profileCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            profileCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-        ])
-
-        let avatar = UIImageView(image: UIImage(systemName: "person.crop.circle.fill"))
-        avatar.tintColor = .systemBlue
-        avatar.translatesAutoresizingMaskIntoConstraints = false
-
-        let nameLabel = UILabel()
-        nameLabel.text = "Empleado Demo"
-        nameLabel.font = UIFont.systemFont(ofSize: 18, weight: .semibold)
-
-        let roleLabel = UILabel()
-        roleLabel.text = "Cargo: Analista de Sistemas"
-        roleLabel.font = UIFont.systemFont(ofSize: 13)
-        roleLabel.textColor = .secondaryLabel
-
-        let deptLabel = UILabel()
-        deptLabel.text = "Área: Tecnología"
-        deptLabel.font = UIFont.systemFont(ofSize: 13)
-        deptLabel.textColor = .secondaryLabel
-
-        let mailRow = crearFilaIcono(texto: "empleado@empresa.com", icono: "envelope")
-        let phoneRow = crearFilaIcono(texto: "+51 999 999 999", icono: "phone")
-
-        let textStack = UIStackView(arrangedSubviews: [nameLabel, roleLabel, deptLabel, mailRow, phoneRow])
-        textStack.axis = .vertical
-        textStack.spacing = 4
-
-        let topStack = UIStackView(arrangedSubviews: [avatar, textStack])
-        topStack.axis = .horizontal
-        topStack.alignment = .top
-        topStack.spacing = 12
-        topStack.translatesAutoresizingMaskIntoConstraints = false
-
-        profileCard.addSubview(topStack)
-
-        NSLayoutConstraint.activate([
-            avatar.widthAnchor.constraint(equalToConstant: 56),
-            avatar.heightAnchor.constraint(equalToConstant: 56),
-
-            topStack.topAnchor.constraint(equalTo: profileCard.topAnchor, constant: 16),
-            topStack.leadingAnchor.constraint(equalTo: profileCard.leadingAnchor, constant: 16),
-            topStack.trailingAnchor.constraint(equalTo: profileCard.trailingAnchor, constant: -16),
-            topStack.bottomAnchor.constraint(equalTo: profileCard.bottomAnchor, constant: -16),
-        ])
-
-        // Tarjeta de resumen de vacaciones
-        let resumenCard = UIView()
-        resumenCard.backgroundColor = .secondarySystemGroupedBackground
-        resumenCard.layer.cornerRadius = 16
-        resumenCard.layer.shadowColor = UIColor.black.cgColor
-        resumenCard.layer.shadowOpacity = 0.08
-        resumenCard.layer.shadowOffset = CGSize(width: 0, height: 3)
-        resumenCard.layer.shadowRadius = 6
-        resumenCard.translatesAutoresizingMaskIntoConstraints = false
-
-        contentView.addSubview(resumenCard)
-
-        NSLayoutConstraint.activate([
-            resumenCard.topAnchor.constraint(equalTo: profileCard.bottomAnchor, constant: 18),
-            resumenCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            resumenCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-        ])
-
-        let resumenTitle = UILabel()
-        resumenTitle.text = "Resumen de vacaciones"
-        resumenTitle.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-
-        let usadosLabel = crearPill(title: "Usados", value: "12 días")
-        let disponiblesLabel = crearPill(title: "Disponibles", value: "8 días")
-        let acumuladosLabel = crearPill(title: "Acumulados", value: "3 días")
-
-        let pillsStack = UIStackView(arrangedSubviews: [usadosLabel, disponiblesLabel, acumuladosLabel])
-        pillsStack.axis = .horizontal
-        pillsStack.spacing = 8
-        pillsStack.distribution = .fillEqually
-
-        let resumenStack = UIStackView(arrangedSubviews: [resumenTitle, pillsStack])
-        resumenStack.axis = .vertical
-        resumenStack.spacing = 10
-        resumenStack.translatesAutoresizingMaskIntoConstraints = false
-
-        resumenCard.addSubview(resumenStack)
-
-        NSLayoutConstraint.activate([
-            resumenStack.topAnchor.constraint(equalTo: resumenCard.topAnchor, constant: 16),
-            resumenStack.leadingAnchor.constraint(equalTo: resumenCard.leadingAnchor, constant: 16),
-            resumenStack.trailingAnchor.constraint(equalTo: resumenCard.trailingAnchor, constant: -16),
-            resumenStack.bottomAnchor.constraint(equalTo: resumenCard.bottomAnchor, constant: -16),
-        ])
-
-        // Botón de editar
-        let editarButton = UIButton(type: .system)
-        editarButton.setTitle("Editar datos", for: .normal)
-        editarButton.setImage(UIImage(systemName: "pencil"), for: .normal)
-        editarButton.tintColor = .white
-        editarButton.backgroundColor = .systemBlue
-        editarButton.layer.cornerRadius = 14
-        editarButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-        editarButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: -4, bottom: 0, right: 4)
-        editarButton.contentEdgeInsets = UIEdgeInsets(top: 10, left: 16, bottom: 10, right: 16)
-        editarButton.translatesAutoresizingMaskIntoConstraints = false
-        editarButton.addTarget(self, action: #selector(abrirEditarEmpleado), for: .touchUpInside)
-
-        contentView.addSubview(editarButton)
-
-        NSLayoutConstraint.activate([
-            editarButton.topAnchor.constraint(equalTo: resumenCard.bottomAnchor, constant: 24),
-            editarButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            editarButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
+            stack.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
+            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            tableView.heightAnchor.constraint(equalToConstant: 400)
         ])
     }
     
-    @objc private func abrirEditarEmpleado(){
-        let editarVC = EditarEmpleadoViewController()
+    // MARK: - TableView config
+    private func configurarTableView() {
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "UsuarioCell")
+    }
+    
+    // MARK: - TableView DataSource
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return usuarios.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "UsuarioCell", for: indexPath)
+        let usuario = usuarios[indexPath.row]
+        cell.textLabel?.numberOfLines = 0
+        cell.textLabel?.text = """
+        \(usuario.nombre) \(usuario.apellido)
+        Área: \(usuario.areaNombre)
+        Email: \(usuario.email)
+        Rol: \(usuario.rol.titulo)
+        Activo: \(usuario.activo ? "Sí" : "No")
+        """
+        cell.accessoryType = .disclosureIndicator
+        return cell
+    }
+    
+    // MARK: - TableView Delegate
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let usuario = usuarios[indexPath.row]
+        mostrarEditarUsuario(usuario, indexPath: indexPath)
+    }
+    
+    // MARK: - Swipe Actions (Editar / Eliminar)
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        
+        let deleteAction = UIContextualAction(style: .destructive, title: "Eliminar") { [weak self] _, _, completionHandler in
+            guard let self = self else { return }
+            let usuario = self.usuarios[indexPath.row]
+            
+            let alerta = UIAlertController(
+                title: "Eliminar usuario",
+                message: "¿Seguro que quieres desactivar a \(usuario.nombre)?",
+                preferredStyle: .alert
+            )
+            
+            alerta.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
+            alerta.addAction(UIAlertAction(title: "Desactivar", style: .destructive) { _ in
+                var usuarioActualizado = usuario
+                usuarioActualizado.activo = false
+                
+                self.usuarioService.actualizarUsuario(usuarioActualizado) { error in
+                    DispatchQueue.main.async {
+                        if let error = error {
+                            let errorAlert = UIAlertController(title: "Error", message: "No se pudo desactivar el usuario: \(error.localizedDescription)", preferredStyle: .alert)
+                            errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+                            self.present(errorAlert, animated: true)
+                        } else {
+                            self.usuarios.remove(at: indexPath.row)
+                            tableView.deleteRows(at: [indexPath], with: .automatic)
+                        }
+                    }
+                }
+            })
+            
+            self.present(alerta, animated: true)
+            completionHandler(true)
+        }
+
+        
+        let editAction = UIContextualAction(style: .normal, title: "Editar") { [weak self] _, _, completionHandler in
+            guard let self = self else { return }
+            let usuario = self.usuarios[indexPath.row]
+            self.mostrarEditarUsuario(usuario, indexPath: indexPath)
+            completionHandler(true)
+        }
+        editAction.backgroundColor = .systemOrange
+        
+        return UISwipeActionsConfiguration(actions: [deleteAction, editAction])
+    }
+    
+    // MARK: - Editar Usuario
+    private func mostrarEditarUsuario(_ usuario: Usuario, indexPath: IndexPath) {
+        let editarVC = EditarEmpleadoViewController(usuario: usuario)
+        editarVC.onSave = { [weak self] usuarioGuardado in
+            self?.usuarios[indexPath.row] = usuarioGuardado
+            self?.tableView.reloadRows(at: [indexPath], with: .automatic)
+        }
         navigationController?.pushViewController(editarVC, animated: true)
     }
-
-    private func crearFilaIcono(texto: String, icono: String) -> UIStackView {
-        let iconView = UIImageView(image: UIImage(systemName: icono))
-        iconView.tintColor = .secondaryLabel
-        iconView.translatesAutoresizingMaskIntoConstraints = false
-        iconView.widthAnchor.constraint(equalToConstant: 16).isActive = true
-
-        let label = UILabel()
-        label.text = texto
-        label.font = UIFont.systemFont(ofSize: 13)
-        label.textColor = .secondaryLabel
-
-        let hStack = UIStackView(arrangedSubviews: [iconView, label])
-        hStack.axis = .horizontal
-        hStack.spacing = 6
-        return hStack
-    }
-
-    private func crearPill(title: String, value: String) -> UIView {
-        let container = UIView()
-        container.backgroundColor = .systemBackground
-        container.layer.cornerRadius = 12
-
-        let titleLabel = UILabel()
-        titleLabel.text = title
-        titleLabel.font = UIFont.systemFont(ofSize: 11, weight: .regular)
-        titleLabel.textColor = .secondaryLabel
-
-        let valueLabel = UILabel()
-        valueLabel.text = value
-        valueLabel.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
-        valueLabel.textColor = .label
-
-        let stack = UIStackView(arrangedSubviews: [titleLabel, valueLabel])
-        stack.axis = .vertical
-        stack.spacing = 2
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        container.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
-            stack.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -8),
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 10),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10)
-        ])
-
-        return container
-    }
-
-    @objc private func editarEmpleado() {
-        print("Editar datos del empleado")
+    
+    // MARK: - Agregar Usuario
+    @objc private func agregarUsuario() {
+        let nuevoUsuario = Usuario(
+            id: UUID().uuidString,
+            nombre: "",
+            apellido: "",
+            email: "",
+            password: "",
+            areaId: "",
+            areaNombre: "",
+            fechaIngreso: Date(),
+            rol: .USUARIO,
+            activo: true
+        )
+        
+        let editarVC = EditarEmpleadoViewController(usuario: nuevoUsuario)
+        editarVC.onSave = { [weak self] usuarioGuardado in
+            self?.usuarios.append(usuarioGuardado)
+            self?.tableView.reloadData()
+        }
+        navigationController?.pushViewController(editarVC, animated: true)
     }
 }
-
