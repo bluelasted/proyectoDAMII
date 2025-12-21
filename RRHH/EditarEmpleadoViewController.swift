@@ -183,12 +183,23 @@ class EditarEmpleadoViewController: UIViewController {
 
     // MARK: - Guardar cambios
     @objc private func guardarCambios() {
+        
+        let passwordIngresado = passwordField.text ?? ""
+        
+        if !passwordIngresado.isEmpty {
+            guard validarPasswordValida(passwordIngresado) else {
+                AppUtils.mostrarAlerta(en: self, titulo: "Contraseña inválida", mensaje: "Debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial."
+                )
+                return
+            }
+        }
+        
         usuario = Usuario(
             id: usuario.id,
             nombre: nombreField.text ?? usuario.nombre,
             apellido: apellidoField.text ?? usuario.apellido,
             email: emailField.text ?? usuario.email,
-            password: passwordField.text ?? usuario.password,
+            password: passwordIngresado.isEmpty ? usuario.password : passwordIngresado,
             areaId: usuario.areaId,
             areaNombre: areaField.text ?? usuario.areaNombre,
             fechaIngreso: fechaSeleccionada ?? usuario.fechaIngreso,
@@ -199,25 +210,11 @@ class EditarEmpleadoViewController: UIViewController {
         usuarioService.actualizarUsuario(usuario) { [weak self] error in
             DispatchQueue.main.async {
                 if let error = error {
-                    let alert = UIAlertController(
-                        title: "Error",
-                        message: "No se pudo guardar el usuario: \(error.localizedDescription)",
-                        preferredStyle: .alert
-                    )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default))
-                    self?.present(alert, animated: true)
+                    AppUtils.mostrarAlerta(en: self!, titulo: "Error", mensaje: "No se pudo guardar el usuario: \(error.localizedDescription)")
                 } else {
                     self?.onSave?(self!.usuario)
                     
-                    let alert = UIAlertController(
-                        title: "Éxito",
-                        message: "Los datos fueron actualizados correctamente.",
-                        preferredStyle: .alert
-                    )
-                    alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
-                        self?.navigationController?.popViewController(animated: true)
-                    })
-                    self?.present(alert, animated: true)
+                    AppUtils.mostrarAlerta(en: self!, titulo: "Éxito", mensaje: "Los datos fueron actualizados correctamente.")
                 }
             }
         }
@@ -229,9 +226,7 @@ class EditarEmpleadoViewController: UIViewController {
             guard let self = self else { return }
 
             if let error = error {
-                let alert = UIAlertController(title: "Error", message: "No se pudieron cargar las áreas: \(error.localizedDescription)", preferredStyle: .alert)
-                alert.addAction(UIAlertAction(title: "OK", style: .default))
-                self.present(alert, animated: true)
+                AppUtils.mostrarAlerta(en: self, titulo: "Error", mensaje: "No se pudieron cargar las áreas: \(error.localizedDescription)")
                 return
             }
 
@@ -287,6 +282,7 @@ class EditarEmpleadoViewController: UIViewController {
         let datePicker = UIDatePicker()
         datePicker.datePickerMode = .date
         datePicker.preferredDatePickerStyle = .wheels
+        datePicker.maximumDate = Date()
         datePicker.date = fechaSeleccionada ?? usuario.fechaIngreso
 
         let alert = UIAlertController(title: "Seleccionar fecha", message: "\n\n\n\n\n\n\n\n\n", preferredStyle: .actionSheet)
@@ -317,4 +313,11 @@ class EditarEmpleadoViewController: UIViewController {
         formatter.dateFormat = "dd/MM/yyyy"
         return formatter.string(from: fecha)
     }
+    
+    private func validarPasswordValida(_ password: String) -> Bool {
+        let regex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).{8,}$"
+        return NSPredicate(format: "SELF MATCHES %@", regex).evaluate(with: "\(password)")
+    }
+    
+
 }

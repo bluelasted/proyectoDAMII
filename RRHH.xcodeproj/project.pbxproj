@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -16,6 +16,7 @@
 		2907EC762EEF4654001EFBF3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2907EC752EEF4654001EFBF3 /* FirebaseCore */; };
 		2907EC782EEF4654001EFBF3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 2907EC772EEF4654001EFBF3 /* FirebaseFirestore */; };
 		2907EC7A2EEF509A001EFBF3 /* AreaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2907EC792EEF509A001EFBF3 /* AreaService.swift */; };
+		291F7EA52EF766E400265751 /* AppUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291F7EA42EF766E000265751 /* AppUtils.swift */; };
 		2938B6CB2EEF2239006AADB2 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 2938B6CA2EEF2239006AADB2 /* FirebaseAuth */; };
 		2938B6CD2EEF2239006AADB2 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 2938B6CC2EEF2239006AADB2 /* FirebaseStorage */; };
 		29BE955C2EEF2A86000127DA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 29BE955B2EEF2A86000127DA /* FirebaseAuth */; };
@@ -46,6 +47,7 @@
 		2907EC6D2EEF3B28001EFBF3 /* Solicitud.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Solicitud.swift; sourceTree = "<group>"; };
 		2907EC6F2EEF4224001EFBF3 /* UsuarioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsuarioService.swift; sourceTree = "<group>"; };
 		2907EC792EEF509A001EFBF3 /* AreaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AreaService.swift; sourceTree = "<group>"; };
+		291F7EA42EF766E000265751 /* AppUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUtils.swift; sourceTree = "<group>"; };
 		EA3EBDB52EDD74C7006C4BB9 /* HomeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewController.swift; sourceTree = "<group>"; };
 		EA3EE6082EE8D1D900AED661 /* DetalleSolicitudViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetalleSolicitudViewController.swift; sourceTree = "<group>"; };
 		EA3EE60A2EE8D64D00AED661 /* EditarEmpleadoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditarEmpleadoViewController.swift; sourceTree = "<group>"; };
@@ -66,6 +68,10 @@
 		EAEDD7862EE825F4009EBC9B /* AprobacionesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AprobacionesViewController.swift; sourceTree = "<group>"; };
 		EAEDD7882EE8261A009EBC9B /* DatosEmpleadoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatosEmpleadoViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		291F7EA62EF7A58100265751 /* Core */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Core; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		EA65C0FC2EDD461B0017D768 /* Frameworks */ = {
@@ -104,6 +110,14 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		291F7EA32EF766B100265751 /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				291F7EA42EF766E000265751 /* AppUtils.swift */,
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
 		EA65C0F62EDD461B0017D768 = {
 			isa = PBXGroup;
 			children = (
@@ -123,6 +137,8 @@
 		EA65C1012EDD461B0017D768 /* RRHH */ = {
 			isa = PBXGroup;
 			children = (
+				291F7EA62EF7A58100265751 /* Core */,
+				291F7EA32EF766B100265751 /* Helpers */,
 				2907EC712EEF422D001EFBF3 /* Services */,
 				2907EC682EEF3AF9001EFBF3 /* Models */,
 				EA3EE6082EE8D1D900AED661 /* DetalleSolicitudViewController.swift */,
@@ -162,6 +178,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				291F7EA62EF7A58100265751 /* Core */,
 			);
 			name = RRHH;
 			productName = RRHH;
@@ -236,6 +255,7 @@
 				EAEDD7892EE8261A009EBC9B /* DatosEmpleadoViewController.swift in Sources */,
 				2907EC7A2EEF509A001EFBF3 /* AreaService.swift in Sources */,
 				EA3EE6092EE8D1D900AED661 /* DetalleSolicitudViewController.swift in Sources */,
+				291F7EA52EF766E400265751 /* AppUtils.swift in Sources */,
 				2907EC6E2EEF3B28001EFBF3 /* Solicitud.swift in Sources */,
 				2907EC6C2EEF3B19001EFBF3 /* Area.swift in Sources */,
 				EAEDD7812EE8256C009EBC9B /* SolicitarVacacionesViewController.swift in Sources */,

@@ -154,32 +154,23 @@ class LoginViewController: UIViewController {
 
         // Validar campos vacíos
         if email.isEmpty || password.isEmpty {
-            mostrarAlerta(titulo: "Faltan datos",
-                        mensaje: "Ingresa correo y contraseña.")
+            AppUtils.mostrarAlerta(en: self, titulo: "Faltan Datos", mensaje: "Ingresa correo y contraseña.")
             return
         }
         
         // Logeo con firebase
         usuarioService.validarUsuario(email: email, password: password) { [weak self] usuario, error in
             DispatchQueue.main.async {
+                guard let self = self else { return }
+
                 if let error = error {
-                    self?.mostrarAlerta(titulo: "Error", mensaje: error.localizedDescription)
-                } else {
-                    self?.irAHOME()
+                    AppUtils.mostrarAlerta(en: self, titulo: "Error", mensaje: error.localizedDescription)
+                } else if let usuario = usuario {
+                    Sesion.shared.usuario = usuario
+                    self.irAHOME()
                 }
             }
         }
-    }
-
-    // Mostrar alertas
-    private func mostrarAlerta(titulo: String, mensaje: String) {
-        let alert = UIAlertController(title: titulo,
-                                      message: mensaje,
-                                      preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK",
-                                      style: .default,
-                                      handler: nil))
-        present(alert, animated: true, completion: nil)
     }
 
     // Ir a la segunda pantalla
