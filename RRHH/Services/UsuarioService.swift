@@ -95,6 +95,7 @@ class UsuarioService {
             db.collection(collection)
                 .whereField("email", isEqualTo: email)
                 .whereField("password", isEqualTo: password)
+                .whereField("activo", isEqualTo: true) 
                 .getDocuments { snapshot, error in
                     if let error = error {
                         completion(nil, error)

@@ -18,6 +18,10 @@ class DatosEmpleadoViewController: UIViewController, UITableViewDataSource, UITa
         setupUI()
         configurarTableView()
         cargarUsuarios()
+        
+        if let usuarioLogueado = Sesion.shared.usuario, usuarioLogueado.rol != .ADMINISTRADOR {
+            agregarButton.isHidden = true
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -130,21 +134,27 @@ class DatosEmpleadoViewController: UIViewController, UITableViewDataSource, UITa
     // MARK: - Swipe Actions (Editar / Eliminar)
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         
+        // Verificar rol del usuario logueado
+        guard let usuarioLogueado = Sesion.shared.usuario, usuarioLogueado.rol == .ADMINISTRADOR else {
+            return nil
+        }
+
+        let usuario = usuarios[indexPath.row]
+
         let deleteAction = UIContextualAction(style: .destructive, title: "Eliminar") { [weak self] _, _, completionHandler in
             guard let self = self else { return }
-            let usuario = self.usuarios[indexPath.row]
-            
+
             let alerta = UIAlertController(
                 title: "Eliminar usuario",
                 message: "¿Seguro que quieres desactivar a \(usuario.nombre)?",
                 preferredStyle: .alert
             )
-            
+
             alerta.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
             alerta.addAction(UIAlertAction(title: "Desactivar", style: .destructive) { _ in
                 var usuarioActualizado = usuario
                 usuarioActualizado.activo = false
-                
+
                 self.usuarioService.actualizarUsuario(usuarioActualizado) { error in
                     DispatchQueue.main.async {
                         if let error = error {
@@ -152,31 +162,53 @@ class DatosEmpleadoViewController: UIViewController, UITableViewDataSource, UITa
                             errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
                             self.present(errorAlert, animated: true)
                         } else {
+                            let solicitudService = SolicitudService()
+                            solicitudService.obtenerSolicitudesPorUsuario(usuarioId: usuario.id) { solicitudes, error in
+                                if let solicitudes = solicitudes {
+                                    for solicitud in solicitudes {
+                                        if solicitud.estado != .anulada {
+                                            solicitudService.actualizarEstadoSolicitud(solicitudId: solicitud.id, estado: .anulada) { error in
+                                                if let error = error {
+                                                    print("Error anulando solicitud: \(error.localizedDescription)")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                             self.usuarios.remove(at: indexPath.row)
                             tableView.deleteRows(at: [indexPath], with: .automatic)
                         }
                     }
                 }
             })
-            
+
             self.present(alerta, animated: true)
             completionHandler(true)
         }
 
-        
         let editAction = UIContextualAction(style: .normal, title: "Editar") { [weak self] _, _, completionHandler in
             guard let self = self else { return }
-            let usuario = self.usuarios[indexPath.row]
             self.mostrarEditarUsuario(usuario, indexPath: indexPath)
             completionHandler(true)
         }
         editAction.backgroundColor = .systemOrange
-        
+
         return UISwipeActionsConfiguration(actions: [deleteAction, editAction])
     }
     
     // MARK: - Editar Usuario
     private func mostrarEditarUsuario(_ usuario: Usuario, indexPath: IndexPath) {
+        guard let usuarioLogueado = Sesion.shared.usuario, usuarioLogueado.rol == .ADMINISTRADOR else {
+            let alert = UIAlertController(title: "Acceso denegado",
+                                          message: "No tienes permisos para editar usuarios.",
+                                          preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+
         let editarVC = EditarEmpleadoViewController(usuario: usuario)
         editarVC.onSave = { [weak self] usuarioGuardado in
             self?.usuarios[indexPath.row] = usuarioGuardado

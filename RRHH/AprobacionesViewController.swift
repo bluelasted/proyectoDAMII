@@ -147,9 +147,18 @@ class AprobacionesViewController: UIViewController {
             topStack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
             topStack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14)
         ])
+        
+        guard let usuario = Sesion.shared.usuario else {
+            AppUtils.mostrarAlerta(
+                en: self,
+                titulo: "Error",
+                mensaje: "No se pudo obtener la información del usuario."
+            )
+            return UIView()
+        }
 
         // 🔥 SOLO SI ESTÁ PENDIENTE → BOTONES
-        if solicitud.estado == .pendiente {
+        if solicitud.estado == .pendiente && usuario.id != solicitud.usuarioId {
             let approveButton = UIButton(type: .system)
             approveButton.setTitle(" Aprobar", for: .normal)
             approveButton.setImage(UIImage(systemName: "checkmark.circle.fill"), for: .normal)
@@ -242,23 +251,44 @@ class AprobacionesViewController: UIViewController {
         }
     }
     
+    private func procesarSolicitudes(solicitudes: [Solicitud]?, error: Error?) {
+        if let error = error {
+            AppUtils.mostrarAlerta(en: self, titulo: "Error", mensaje: error.localizedDescription)
+            return
+        }
+        
+        self.solicitudes = (solicitudes ?? [])
+            .sorted { primera, segunda in
+                if primera.estado == .pendiente && segunda.estado != .pendiente {
+                    return true
+                } else if primera.estado != .pendiente && segunda.estado == .pendiente {
+                    return false
+                } else {
+                    return true
+                }
+            }
+        
+        self.renderizarSolicitudes()
+    }
+    
     private func cargarSolicitudes() {
-        solicitudService.obtenerSolicitudes { [weak self] solicitudes, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                AppUtils.mostrarAlerta(
-                    en: self,
-                    titulo: "Error",
-                    mensaje: error.localizedDescription
-                )
-                return
+        guard let usuario = Sesion.shared.usuario else {
+            AppUtils.mostrarAlerta(en: self, titulo: "Error", mensaje: "No se pudo obtener la información del usuario.")
+            return
+        }
+        
+        switch usuario.rol {
+        case .JEFE_DE_AREA:
+            solicitudService.obtenerSolicitudesPorArea(areaId: usuario.areaId) { [weak self] solicitudes, error in
+                guard let self = self else { return }
+                self.procesarSolicitudes(solicitudes: solicitudes, error: error)
             }
 
-            self.solicitudes = (solicitudes ?? []).filter {
-                $0.estado == .pendiente
+        default:
+            solicitudService.obtenerSolicitudes { [weak self] solicitudes, error in
+                guard let self = self else { return }
+                self.procesarSolicitudes(solicitudes: solicitudes, error: error)
             }
-            self.renderizarSolicitudes()
         }
     }
     

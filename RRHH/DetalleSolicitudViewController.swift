@@ -61,7 +61,7 @@ class DetalleSolicitudViewController: UIViewController {
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-
+        
         let contentView = UIView()
         contentView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(contentView)
@@ -88,7 +88,7 @@ class DetalleSolicitudViewController: UIViewController {
         NSLayoutConstraint.activate([
             mainCard.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24),
             mainCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            mainCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            mainCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20)
         ])
 
         // Icono según el tipo
@@ -98,13 +98,13 @@ class DetalleSolicitudViewController: UIViewController {
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.widthAnchor.constraint(equalToConstant: 40).isActive = true
         iconView.heightAnchor.constraint(equalToConstant: 40).isActive = true
-
+       
         // Formatear fechas para el rango
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd MMM yyyy"
         let fechaInicioStr = dateFormatter.string(from: solicitud.fechaInicio)
         let fechaFinStr = dateFormatter.string(from: solicitud.fechaFin)
-
+        
         // Labels principales
         let rangoLabel = UILabel()
         rangoLabel.text = "\(fechaInicioStr) - \(fechaFinStr)"
@@ -116,34 +116,40 @@ class DetalleSolicitudViewController: UIViewController {
         tipoLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         tipoLabel.textColor = .secondaryLabel
 
+        // Stack vertical con fechas y tipo
         let headerTextStack = UIStackView(arrangedSubviews: [rangoLabel, tipoLabel])
         headerTextStack.axis = .vertical
         headerTextStack.spacing = 2
-
-        // Estado
-        let estadoColor = obtenerColorEstado()
-        let estadoTexto = obtenerTextoEstado()
-
-        let estadoLabel = UILabel()
-        estadoLabel.text = "  \(estadoTexto)  "
-        estadoLabel.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
-        estadoLabel.textColor = .white
-        estadoLabel.backgroundColor = estadoColor
-        estadoLabel.layer.cornerRadius = 12
-        estadoLabel.clipsToBounds = true
-
-        let headerStack = UIStackView(arrangedSubviews: [iconView, headerTextStack, UIView(), estadoLabel])
-        headerStack.axis = .horizontal
-        headerStack.spacing = 12
-        headerStack.alignment = .center
-        headerStack.translatesAutoresizingMaskIntoConstraints = false
-
-        mainCard.addSubview(headerStack)
+        
+        // Stack principal horizontal: icono a la izquierda + texto
+        let mainHeaderStack = UIStackView(arrangedSubviews: [iconView, headerTextStack])
+        mainHeaderStack.axis = .horizontal
+        mainHeaderStack.alignment = .top
+        mainHeaderStack.spacing = 12
+        mainHeaderStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        mainCard.addSubview(mainHeaderStack)
 
         NSLayoutConstraint.activate([
-            headerStack.topAnchor.constraint(equalTo: mainCard.topAnchor, constant: 16),
-            headerStack.leadingAnchor.constraint(equalTo: mainCard.leadingAnchor, constant: 16),
-            headerStack.trailingAnchor.constraint(equalTo: mainCard.trailingAnchor, constant: -16)
+            mainHeaderStack.topAnchor.constraint(equalTo: mainCard.topAnchor, constant: 16),
+            mainHeaderStack.leadingAnchor.constraint(equalTo: mainCard.leadingAnchor, constant: 16),
+            mainHeaderStack.trailingAnchor.constraint(equalTo: mainCard.trailingAnchor, constant: -16)
+        ])
+
+        // Badge de estado debajo del texto
+        let estadoLabel = UILabel()
+        estadoLabel.text = "  \(obtenerTextoEstado())  "
+        estadoLabel.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
+        estadoLabel.textColor = .white
+        estadoLabel.backgroundColor = obtenerColorEstado()
+        estadoLabel.layer.cornerRadius = 12
+        estadoLabel.clipsToBounds = true
+        estadoLabel.translatesAutoresizingMaskIntoConstraints = false
+        mainCard.addSubview(estadoLabel)
+
+        NSLayoutConstraint.activate([
+            estadoLabel.topAnchor.constraint(equalTo: mainHeaderStack.bottomAnchor, constant: 8),
+            estadoLabel.leadingAnchor.constraint(equalTo: headerTextStack.leadingAnchor)
         ])
 
         // Separador
@@ -153,7 +159,7 @@ class DetalleSolicitudViewController: UIViewController {
         mainCard.addSubview(separator)
 
         NSLayoutConstraint.activate([
-            separator.topAnchor.constraint(equalTo: headerStack.bottomAnchor, constant: 12),
+            separator.topAnchor.constraint(equalTo: estadoLabel.bottomAnchor, constant: 12),
             separator.leadingAnchor.constraint(equalTo: mainCard.leadingAnchor, constant: 16),
             separator.trailingAnchor.constraint(equalTo: mainCard.trailingAnchor, constant: -16),
             separator.heightAnchor.constraint(equalToConstant: 1)
@@ -220,9 +226,14 @@ class DetalleSolicitudViewController: UIViewController {
             detailStack.trailingAnchor.constraint(equalTo: mainCard.trailingAnchor, constant: -16),
             detailStack.bottomAnchor.constraint(equalTo: mainCard.bottomAnchor, constant: -16)
         ])
+        
+        // Obtener usuario de la sesión
+        guard let usuario = Sesion.shared.usuario else {
+            return
+        }
 
         // Botón inferior solo si está pendiente
-        if solicitud.estado == .pendiente {
+        if solicitud.estado == .pendiente && solicitud.usuarioId == usuario.id {
             let footerButton = UIButton(type: .system)
             footerButton.setTitle("Cancelar solicitud", for: .normal)
             footerButton.setImage(UIImage(systemName: "xmark.circle"), for: .normal)
@@ -321,7 +332,7 @@ class DetalleSolicitudViewController: UIViewController {
             let solicitudService = SolicitudService()
             solicitudService.actualizarEstadoSolicitud(
                 solicitudId: self.solicitud.id,
-                nuevoEstado: .anulada
+                estado: .anulada
             ) { error in
                 DispatchQueue.main.async {
                     if let error = error {

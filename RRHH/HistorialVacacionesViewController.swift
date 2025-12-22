@@ -98,7 +98,12 @@ class HistorialVacacionesViewController: UIViewController {
         verDetalleSolicitud(solicitud)
     }
 
-    private func crearRegistro(solicitud: Solicitud, titulo: String, detalle: String, icono: String, estado: EstadoSolicitud) -> UIView {
+    private func crearRegistro(
+        solicitud: Solicitud,
+        titulo: String,
+        icono: String,
+        estado: EstadoSolicitud
+    ) -> UIView {
         let card = UIView()
         card.backgroundColor = .secondarySystemGroupedBackground
         card.layer.cornerRadius = 14
@@ -107,23 +112,33 @@ class HistorialVacacionesViewController: UIViewController {
         card.layer.shadowOffset = CGSize(width: 0, height: 2)
         card.layer.shadowRadius = 4
         card.translatesAutoresizingMaskIntoConstraints = false
-        card.heightAnchor.constraint(equalToConstant: 70).isActive = true
+        card.heightAnchor.constraint(equalToConstant: 100).isActive = true // un poco más alto para todo
 
         let iconView = UIImageView(image: UIImage(systemName: icono))
         iconView.tintColor = estado == .aprobada ? .systemGreen : .systemRed
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
+        // Usuario (primero y más grande)
+        let usuarioLabel = UILabel()
+        usuarioLabel.text = solicitud.usuarioNombre
+        usuarioLabel.font = UIFont.systemFont(ofSize: 16, weight: .semibold) // más grande y resaltado
+        usuarioLabel.textColor = .label
+
+        // Título (fechas) - abajo
         let titleLabel = UILabel()
         titleLabel.text = titulo
-        titleLabel.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
-        titleLabel.textColor = .label
+        titleLabel.font = UIFont.systemFont(ofSize: 14, weight: .regular)
+        titleLabel.textColor = .secondaryLabel
 
-        let detailLabel = UILabel()
-        detailLabel.text = detalle
-        detailLabel.font = UIFont.systemFont(ofSize: 13)
-        detailLabel.textColor = .secondaryLabel
+        // Tipo + motivo - abajo también
+        let tipoMotivoLabel = UILabel()
+        tipoMotivoLabel.text = "\(solicitud.tipoSolicitud.titulo) – \(solicitud.motivo)"
+        tipoMotivoLabel.font = UIFont.systemFont(ofSize: 13)
+        tipoMotivoLabel.textColor = .secondaryLabel
+        tipoMotivoLabel.numberOfLines = 2
 
-        let textStack = UIStackView(arrangedSubviews: [titleLabel, detailLabel])
+        // Stack de texto: nombre arriba, luego fechas y tipo+motivo
+        let textStack = UIStackView(arrangedSubviews: [usuarioLabel, titleLabel, tipoMotivoLabel])
         textStack.axis = .vertical
         textStack.spacing = 2
 
@@ -137,7 +152,6 @@ class HistorialVacacionesViewController: UIViewController {
 
         NSLayoutConstraint.activate([
             iconView.widthAnchor.constraint(equalToConstant: 26),
-
             hStack.topAnchor.constraint(equalTo: card.topAnchor, constant: 10),
             hStack.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -10),
             hStack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
@@ -153,25 +167,45 @@ class HistorialVacacionesViewController: UIViewController {
         return card
     }
     
-    private func cargarHistorial() {
-        solicitudService.obtenerSolicitudes { [weak self] solicitudes, error in
-            guard let self = self else { return }
-
-            if let error = error {
-                AppUtils.mostrarAlerta(
-                    en: self,
-                    titulo: "Error",
-                    mensaje: error.localizedDescription
-                )
-                return
-            }
-
-            self.solicitudes = (solicitudes ?? []).filter {
-                $0.estado != .pendiente
-            }
-
-            self.renderizarHistorial()
+    private func procesarSolicitudes(solicitudes: [Solicitud]?, error: Error?) {
+        if let error = error {
+            AppUtils.mostrarAlerta(en: self, titulo: "Error", mensaje: error.localizedDescription)
+            return
         }
+        
+        self.solicitudes = (solicitudes ?? []).filter {
+            $0.estado != .pendiente
+        }
+        
+        self.renderizarHistorial()
+    }
+    
+    private func cargarHistorial() {
+        guard let usuario = Sesion.shared.usuario else {
+            AppUtils.mostrarAlerta(en: self, titulo: "Error", mensaje: "No se pudo obtener la información del usuario.")
+            return
+        }
+        
+        switch usuario.rol {
+        case .USUARIO:
+            solicitudService.obtenerSolicitudesPorUsuario(usuarioId: usuario.id) { [weak self] solicitudes, error in
+                guard let self = self else { return }
+                self.procesarSolicitudes(solicitudes: solicitudes, error: error)
+            }
+
+        case .JEFE_DE_AREA:
+            solicitudService.obtenerSolicitudesPorArea(areaId: usuario.areaId) { [weak self] solicitudes, error in
+                guard let self = self else { return }
+                self.procesarSolicitudes(solicitudes: solicitudes, error: error)
+            }
+
+        default:
+            solicitudService.obtenerSolicitudes { [weak self] solicitudes, error in
+                guard let self = self else { return }
+                self.procesarSolicitudes(solicitudes: solicitudes, error: error)
+            }
+        }
+        
     }
     
     private func formatearRango(inicio: Date, fin: Date) -> String {
@@ -208,7 +242,7 @@ class HistorialVacacionesViewController: UIViewController {
                     inicio: solicitud.fechaInicio,
                     fin: solicitud.fechaFin
                 ),
-                detalle: solicitud.motivo,
+                //detalle: solicitud.motivo,
                 icono: icono,
                 estado: solicitud.estado
             )

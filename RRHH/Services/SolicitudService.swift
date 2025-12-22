@@ -45,6 +45,7 @@ class SolicitudService {
     
     func obtenerSolicitudes(completion: @escaping ([Solicitud]?, Error?) -> Void) {
         db.collection("solicitudes")
+            .whereField("estado", isNotEqualTo: EstadoSolicitud.anulada.rawValue)
             .getDocuments { snapshot, error in
 
                 if let error = error {
@@ -63,6 +64,7 @@ class SolicitudService {
     func obtenerSolicitudesPorArea(areaId: String, completion: @escaping ([Solicitud]?, Error?) -> Void) {
         db.collection("solicitudes")
             .whereField("areaId", isEqualTo: areaId)
+            .whereField("estado", isNotEqualTo: EstadoSolicitud.anulada.rawValue)
             .getDocuments { snapshot, error in
 
                 if let error = error {
@@ -103,15 +105,6 @@ class SolicitudService {
                 let solicitud = try? snapshot.data(as: Solicitud.self)
                 completion(solicitud, nil)
             }
-    }
-
-    func actualizarEstadoSolicitud(solicitudId: String,nuevoEstado: EstadoSolicitud, completion: @escaping (Error?) -> Void) {
-        db.collection(collection)
-            .document(solicitudId)
-            .updateData([
-                "estado": nuevoEstado.rawValue,
-                "fechaResolucion": Date()
-            ], completion: completion)
     }
     
     func actualizarEstadoSolicitud(solicitudId: String, estado: EstadoSolicitud, completion: @escaping (Error?) -> Void) {
