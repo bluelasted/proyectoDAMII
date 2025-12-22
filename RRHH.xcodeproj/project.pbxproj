@@ -19,6 +19,8 @@
 		291F7EA52EF766E400265751 /* AppUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 291F7EA42EF766E000265751 /* AppUtils.swift */; };
 		2938B6CB2EEF2239006AADB2 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 2938B6CA2EEF2239006AADB2 /* FirebaseAuth */; };
 		2938B6CD2EEF2239006AADB2 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 2938B6CC2EEF2239006AADB2 /* FirebaseStorage */; };
+		2975E24D2EF899620039EC00 /* ValidarSolicitudes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2975E24C2EF899570039EC00 /* ValidarSolicitudes.swift */; };
+		2975E24F2EF89C6D0039EC00 /* SolicitudService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2975E24E2EF89C680039EC00 /* SolicitudService.swift */; };
 		29BE955C2EEF2A86000127DA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 29BE955B2EEF2A86000127DA /* FirebaseAuth */; };
 		29BE955E2EEF2A86000127DA /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 29BE955D2EEF2A86000127DA /* FirebaseFirestore */; };
 		EA3EBDB62EDD74C7006C4BB9 /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA3EBDB52EDD74C7006C4BB9 /* HomeViewController.swift */; };
@@ -48,6 +50,8 @@
 		2907EC6F2EEF4224001EFBF3 /* UsuarioService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsuarioService.swift; sourceTree = "<group>"; };
 		2907EC792EEF509A001EFBF3 /* AreaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AreaService.swift; sourceTree = "<group>"; };
 		291F7EA42EF766E000265751 /* AppUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUtils.swift; sourceTree = "<group>"; };
+		2975E24C2EF899570039EC00 /* ValidarSolicitudes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ValidarSolicitudes.swift; sourceTree = "<group>"; };
+		2975E24E2EF89C680039EC00 /* SolicitudService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolicitudService.swift; sourceTree = "<group>"; };
 		EA3EBDB52EDD74C7006C4BB9 /* HomeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewController.swift; sourceTree = "<group>"; };
 		EA3EE6082EE8D1D900AED661 /* DetalleSolicitudViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetalleSolicitudViewController.swift; sourceTree = "<group>"; };
 		EA3EE60A2EE8D64D00AED661 /* EditarEmpleadoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditarEmpleadoViewController.swift; sourceTree = "<group>"; };
@@ -94,6 +98,7 @@
 		2907EC682EEF3AF9001EFBF3 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				2975E24C2EF899570039EC00 /* ValidarSolicitudes.swift */,
 				2907EC692EEF3B07001EFBF3 /* Usuario.swift */,
 				2907EC6B2EEF3B19001EFBF3 /* Area.swift */,
 				2907EC6D2EEF3B28001EFBF3 /* Solicitud.swift */,
@@ -104,6 +109,7 @@
 		2907EC712EEF422D001EFBF3 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				2975E24E2EF89C680039EC00 /* SolicitudService.swift */,
 				2907EC6F2EEF4224001EFBF3 /* UsuarioService.swift */,
 				2907EC792EEF509A001EFBF3 /* AreaService.swift */,
 			);
@@ -247,6 +253,7 @@
 				EA3EBDB62EDD74C7006C4BB9 /* HomeViewController.swift in Sources */,
 				EA65C1172EDD48C50017D768 /* LoginViewController.swift in Sources */,
 				2907EC6A2EEF3B07001EFBF3 /* Usuario.swift in Sources */,
+				2975E24F2EF89C6D0039EC00 /* SolicitudService.swift in Sources */,
 				EA65C1072EDD461B0017D768 /* ViewController.swift in Sources */,
 				EAEDD7832EE825A2009EBC9B /* SolicitudesPendientesViewController.swift in Sources */,
 				EA3EE60D2EE8EE5300AED661 /* AreasViewController.swift in Sources */,
@@ -259,6 +266,7 @@
 				2907EC6E2EEF3B28001EFBF3 /* Solicitud.swift in Sources */,
 				2907EC6C2EEF3B19001EFBF3 /* Area.swift in Sources */,
 				EAEDD7812EE8256C009EBC9B /* SolicitarVacacionesViewController.swift in Sources */,
+				2975E24D2EF899620039EC00 /* ValidarSolicitudes.swift in Sources */,
 				EAEDD7872EE825F4009EBC9B /* AprobacionesViewController.swift in Sources */,
 				EA65C1032EDD461B0017D768 /* AppDelegate.swift in Sources */,
 				EA65C1052EDD461B0017D768 /* SceneDelegate.swift in Sources */,

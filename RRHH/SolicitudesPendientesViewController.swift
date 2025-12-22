@@ -2,17 +2,10 @@ import UIKit
 
 class SolicitudesPendientesViewController: UIViewController {
 
-    // Modelo simple para la solicitud
-    struct SolicitudPendiente {
-        let rangoFechas: String
-        let tipo: String
-        let motivo: String
-        let estado: String
-        let icono: String
-        let enviadoEl: String
-    }
-
-    private var solicitudes: [SolicitudPendiente] = []
+    private var solicitudes: [Solicitud] = []
+    private let solicitudService = SolicitudService()
+    private var stackView: UIStackView!
+    private var emptyStateLabel: UILabel!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -21,13 +14,13 @@ class SolicitudesPendientesViewController: UIViewController {
         title = "Solicitudes Pendientes"
 
         configurarBotonAtras()
-        cargarSolicitudesDemo()
         setupUI()
     }
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         navigationController?.setNavigationBarHidden(false, animated: true)
+        cargarSolicitudes()
     }
 
     // MARK: - Botón Atrás
@@ -47,35 +40,39 @@ class SolicitudesPendientesViewController: UIViewController {
         navigationController?.popViewController(animated: true)
     }
 
-    // MARK: - Data demo
+    // MARK: - Cargar solicitudes desde Firebase
 
-    private func cargarSolicitudesDemo() {
-        solicitudes = [
-            SolicitudPendiente(
-                rangoFechas: "15 - 20 Enero 2026",
-                tipo: "Vacaciones anuales",
-                motivo: "Viaje familiar a la playa.",
-                estado: "Pendiente",
-                icono: "airplane",
-                enviadoEl: "02 Ene 2026"
-            ),
-            SolicitudPendiente(
-                rangoFechas: "02 Febrero 2026",
-                tipo: "Día personal",
-                motivo: "Trámite personal en la mañana.",
-                estado: "En revisión",
-                icono: "person.badge.clock",
-                enviadoEl: "25 Ene 2026"
-            ),
-            SolicitudPendiente(
-                rangoFechas: "10 - 12 Marzo 2026",
-                tipo: "Licencia médica",
-                motivo: "Controles médicos programados.",
-                estado: "Pendiente",
-                icono: "stethoscope",
-                enviadoEl: "01 Mar 2026"
-            )
-        ]
+    private func cargarSolicitudes() {
+        guard let usuario = Sesion.shared.usuario else {
+            AppUtils.mostrarAlerta(en: self, titulo: "Error", mensaje: "No se pudo obtener la información del usuario.")
+            return
+        }
+
+        solicitudService.obtenerSolicitudesPorUsuario(usuarioId: usuario.id) { [weak self] solicitudes, error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+
+                if let error = error {
+                    AppUtils.mostrarAlerta(
+                        en: self,
+                        titulo: "Error",
+                        mensaje: "No se pudieron cargar las solicitudes: \(error.localizedDescription)"
+                    )
+                    self.solicitudes = []
+                    self.actualizarUI()
+                    return
+                }
+
+                var solicitudesFiltradas = (solicitudes ?? []).filter {
+                    $0.estado == .pendiente
+                }
+                
+                solicitudesFiltradas.sort { $0.fechaCreacion > $1.fechaCreacion }
+                self.solicitudes = solicitudesFiltradas
+                                
+                self.actualizarUI()
+            }
+        }
     }
 
     // MARK: - UI
@@ -118,28 +115,63 @@ class SolicitudesPendientesViewController: UIViewController {
             headerLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
         ])
 
-        let stack = UIStackView()
-        stack.axis = .vertical
-        stack.spacing = 12
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
+        // Stack para las tarjetas
+        stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.spacing = 12
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(stackView)
+
+        // Empty state
+        emptyStateLabel = UILabel()
+        emptyStateLabel.text = "No tienes solicitudes pendientes"
+        emptyStateLabel.font = UIFont.systemFont(ofSize: 16)
+        emptyStateLabel.textColor = .secondaryLabel
+        emptyStateLabel.textAlignment = .center
+        emptyStateLabel.isHidden = true
+        emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(emptyStateLabel)
 
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 18),
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
+            stackView.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 18),
+            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+
+            emptyStateLabel.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 60),
+            emptyStateLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            emptyStateLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            emptyStateLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20)
         ])
 
-        // Crear una tarjeta por cada solicitud
-        for (index, solicitud) in solicitudes.enumerated() {
-            let card = crearTarjetaSolicitud(solicitud: solicitud, index: index)
-            stack.addArrangedSubview(card)
+        // Constraint de bottom dinámico
+        let stackBottom = stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
+        stackBottom.priority = .defaultLow
+        stackBottom.isActive = true
+
+        let emptyBottom = emptyStateLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -100)
+        emptyBottom.priority = .defaultLow
+        emptyBottom.isActive = true
+    }
+
+    private func actualizarUI() {
+        // Limpiar stack
+        stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+        if solicitudes.isEmpty {
+            emptyStateLabel.isHidden = false
+            stackView.isHidden = true
+        } else {
+            emptyStateLabel.isHidden = true
+            stackView.isHidden = false
+
+            for (index, solicitud) in solicitudes.enumerated() {
+                let card = crearTarjetaSolicitud(solicitud: solicitud, index: index)
+                stackView.addArrangedSubview(card)
+            }
         }
     }
 
-    private func crearTarjetaSolicitud(solicitud: SolicitudPendiente,
-                                       index: Int) -> UIView {
+    private func crearTarjetaSolicitud(solicitud: Solicitud, index: Int) -> UIView {
 
         let card = UIButton(type: .system)
         card.backgroundColor = .secondarySystemGroupedBackground
@@ -153,21 +185,29 @@ class SolicitudesPendientesViewController: UIViewController {
         card.translatesAutoresizingMaskIntoConstraints = false
         card.heightAnchor.constraint(equalToConstant: 80).isActive = true
 
-        card.tag = index   // para saber qué solicitud se tocó
+        card.tag = index
         card.addTarget(self, action: #selector(verDetalleSolicitud(_:)), for: .touchUpInside)
 
-        let iconView = UIImageView(image: UIImage(systemName: solicitud.icono))
+        // Icono según el tipo
+        let icono = obtenerIcono(para: solicitud.tipoSolicitud)
+        let iconView = UIImageView(image: UIImage(systemName: icono))
         iconView.tintColor = .systemBlue
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.setContentHuggingPriority(.required, for: .horizontal)
 
+        // Formatear fechas
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd MMM yyyy"
+        let fechaInicioStr = dateFormatter.string(from: solicitud.fechaInicio)
+        let fechaFinStr = dateFormatter.string(from: solicitud.fechaFin)
+
         let titleLabel = UILabel()
-        titleLabel.text = solicitud.rangoFechas
+        titleLabel.text = "\(fechaInicioStr) - \(fechaFinStr)"
         titleLabel.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
         titleLabel.textColor = .label
 
         let detailLabel = UILabel()
-        detailLabel.text = solicitud.tipo
+        detailLabel.text = solicitud.tipoSolicitud.titulo
         detailLabel.font = UIFont.systemFont(ofSize: 13)
         detailLabel.textColor = .secondaryLabel
 
@@ -175,10 +215,27 @@ class SolicitudesPendientesViewController: UIViewController {
         textStack.axis = .vertical
         textStack.spacing = 2
 
-        let estadoColor: UIColor = (solicitud.estado == "En revisión") ? .systemBlue : .systemOrange
+        // Badge de estado
+        let estadoColor: UIColor
+        let estadoTexto: String
+        
+        switch solicitud.estado {
+        case .pendiente:
+            estadoColor = .systemOrange
+            estadoTexto = "Pendiente"
+        case .aprobada:
+            estadoColor = .systemGreen
+            estadoTexto = "Aprobada"
+        case .rechazada:
+            estadoColor = .systemRed
+            estadoTexto = "Rechazada"
+        case .anulada:
+            estadoColor = .systemGray
+            estadoTexto = "Anulada"
+        }
 
         let estadoLabel = UILabel()
-        estadoLabel.text = "  \(solicitud.estado)  "
+        estadoLabel.text = "  \(estadoTexto)  "
         estadoLabel.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
         estadoLabel.textColor = .white
         estadoLabel.backgroundColor = estadoColor
@@ -208,6 +265,21 @@ class SolicitudesPendientesViewController: UIViewController {
         ])
 
         return card
+    }
+
+    private func obtenerIcono(para tipo: TipoSolicitud) -> String {
+        switch tipo {
+        case .vacaciones:
+            return "airplane"
+        case .permisoPersonal:
+            return "person.badge.clock"
+        case .licenciaMedica:
+            return "stethoscope"
+        case .licenciaMaternidadPaternidad:
+            return "figure.and.child.holdinghands"
+        case .licenciaDuelo:
+            return "heart.fill"
+        }
     }
 
     // MARK: - Navegación al detalle

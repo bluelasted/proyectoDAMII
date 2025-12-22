@@ -46,8 +46,34 @@ class AreaService {
     }
     
     func eliminarArea(_ area: Area, completion: @escaping (Error?) -> Void) {
-        db.collection(collection).document(area.id).delete { error in
-            completion(error)
-        }
+        db.collection("usuarios")
+            .whereField("areaId", isEqualTo: area.id)
+            .limit(to: 1)
+            .getDocuments { snapshot, error in
+
+                if let error = error {
+                    completion(error)
+                    return
+                }
+
+                if let snapshot = snapshot, !snapshot.isEmpty {
+                    let error = NSError(
+                        domain: "Area",
+                        code: 400,
+                        userInfo: [
+                            NSLocalizedDescriptionKey:
+                            "No se puede eliminar el área porque tiene usuarios asignados."
+                        ]
+                    )
+                    completion(error)
+                    return
+                }
+
+                self.db.collection(self.collection)
+                    .document(area.id)
+                    .delete { error in
+                        completion(error)
+                    }
+            }
     }
 }

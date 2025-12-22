@@ -9,8 +9,11 @@ class SolicitarVacacionesViewController: UIViewController {
 
     private var inicioButton: UIButton!
     private var finButton: UIButton!
+    private var tipoButton: UIButton!
+    private var motivoTextView: UITextView!
 
-    private var tipoSeleccionadoButton: UIButton?   // Radio button seleccionado
+    private var tipoSeleccionado: TipoSolicitud?
+    private let solicitudService = SolicitudService()
 
     private let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -155,41 +158,31 @@ class SolicitarVacacionesViewController: UIViewController {
             fechasStack.bottomAnchor.constraint(equalTo: fechasCard.bottomAnchor, constant: -14)
         ])
 
-        // MARK: Card Tipo de vacaciones (radio buttons)
+        // MARK: Card Tipo de vacaciones (con estilo de ActionSheet)
         let tipoCard = crearCard(
             titulo: "Tipo de vacaciones",
             icono: "sun.max",
             color: .systemOrange
         )
 
-        let vacacionesAnualesButton = crearChipButton(titulo: "Vacaciones anuales")
-        let diaPersonalButton      = crearChipButton(titulo: "Día personal")
-        let licenciaMedicaButton   = crearChipButton(titulo: "Licencia médica")
-        let sinGoceButton          = crearChipButton(titulo: "Sin goce de haber")
+        tipoButton = UIButton(type: .system)
+        tipoButton.setTitle("Tipo: Seleccionar", for: .normal)
+        tipoButton.setTitleColor(.label, for: .normal)
+        tipoButton.contentHorizontalAlignment = .left
+        tipoButton.backgroundColor = .systemBackground
+        tipoButton.layer.cornerRadius = 10
+        tipoButton.heightAnchor.constraint(equalToConstant: 45).isActive = true
+        tipoButton.addTarget(self, action: #selector(seleccionarTipo), for: .touchUpInside)
+        tipoButton.translatesAutoresizingMaskIntoConstraints = false
 
-        let chipsStack = UIStackView(arrangedSubviews: [
-            vacacionesAnualesButton,
-            diaPersonalButton,
-            licenciaMedicaButton,
-            sinGoceButton
-        ])
-        chipsStack.axis = .horizontal
-        chipsStack.spacing = 8
-        chipsStack.distribution = .fillEqually
-        chipsStack.translatesAutoresizingMaskIntoConstraints = false
-
-        tipoCard.addSubview(chipsStack)
+        tipoCard.addSubview(tipoButton)
 
         NSLayoutConstraint.activate([
-            chipsStack.topAnchor.constraint(equalTo: tipoCard.topAnchor, constant: 56),
-            chipsStack.leadingAnchor.constraint(equalTo: tipoCard.leadingAnchor, constant: 16),
-            chipsStack.trailingAnchor.constraint(equalTo: tipoCard.trailingAnchor, constant: -16),
-            chipsStack.bottomAnchor.constraint(equalTo: tipoCard.bottomAnchor, constant: -14)
+            tipoButton.topAnchor.constraint(equalTo: tipoCard.topAnchor, constant: 56),
+            tipoButton.leadingAnchor.constraint(equalTo: tipoCard.leadingAnchor, constant: 16),
+            tipoButton.trailingAnchor.constraint(equalTo: tipoCard.trailingAnchor, constant: -16),
+            tipoButton.bottomAnchor.constraint(equalTo: tipoCard.bottomAnchor, constant: -14)
         ])
-
-        // Opcional: marcar uno por defecto
-        aplicarEstiloChip(vacacionesAnualesButton, seleccionado: true)
-        tipoSeleccionadoButton = vacacionesAnualesButton
 
         // MARK: Card Motivo
         let motivoCard = crearCard(
@@ -198,7 +191,7 @@ class SolicitarVacacionesViewController: UIViewController {
             color: .systemGreen
         )
 
-        let motivoTextView = UITextView()
+        motivoTextView = UITextView()
         motivoTextView.font = UIFont.systemFont(ofSize: 14)
         motivoTextView.textColor = .label
         motivoTextView.backgroundColor = .secondarySystemGroupedBackground
@@ -301,74 +294,60 @@ class SolicitarVacacionesViewController: UIViewController {
         return button
     }
 
-    private func crearChipButton(titulo: String) -> UIButton {
-        let button = UIButton(type: .system)
-        button.setTitle(titulo, for: .normal)
-        button.titleLabel?.font = UIFont.systemFont(ofSize: 13, weight: .medium)
-        button.layer.cornerRadius = 10
-        button.heightAnchor.constraint(equalToConstant: 36).isActive = true
-
-        // Estilo inicial (no seleccionado)
-        aplicarEstiloChip(button, seleccionado: false)
-
-        // Cada chip se comporta como radio button
-        button.addTarget(self, action: #selector(tipoVacacionesTapped(_:)), for: .touchUpInside)
-
-        return button
-    }
-
-    // Estilo para chips (radio buttons)
-    private func aplicarEstiloChip(_ button: UIButton, seleccionado: Bool) {
-        if seleccionado {
-            button.backgroundColor = .systemBlue
-            button.setTitleColor(.white, for: .normal)
-        } else {
-            button.backgroundColor = .systemBackground
-            button.setTitleColor(.label, for: .normal)
+    // MARK: - Seleccionar Tipo
+    @objc private func seleccionarTipo() {
+        let alert = UIAlertController(title: "Seleccionar Tipo", message: nil, preferredStyle: .actionSheet)
+        
+        for tipo in TipoSolicitud.allCases {
+            alert.addAction(UIAlertAction(title: tipo.titulo, style: .default) { _ in
+                self.tipoSeleccionado = tipo
+                self.tipoButton.setTitle("Tipo: \(tipo.titulo)", for: .normal)
+            })
         }
-    }
-
-    // Cuando se toca un tipo de vacaciones
-    @objc private func tipoVacacionesTapped(_ sender: UIButton) {
-        // Des-selecciona el anterior
-        if let anterior = tipoSeleccionadoButton {
-            aplicarEstiloChip(anterior, seleccionado: false)
+        
+        alert.addAction(UIAlertAction(title: "Cancelar", style: .cancel))
+        
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = self.tipoButton
+            popover.sourceRect = self.tipoButton.bounds
         }
-
-        // Marca el nuevo como seleccionado
-        tipoSeleccionadoButton = sender
-        aplicarEstiloChip(sender, seleccionado: true)
-
-        print("Tipo de vacaciones seleccionado: \(sender.currentTitle ?? "")")
+        
+        self.present(alert, animated: true)
     }
 
     // MARK: - Fecha (ActionSheet con UIDatePicker)
 
     private func mostrarDatePicker(esInicio: Bool) {
-        let titulo = esInicio ? "Selecciona la fecha de inicio" : "Selecciona la fecha de fin"
 
-        let alert = UIAlertController(
-            title: titulo,
-            message: "\n\n\n\n\n\n\n\n\n",
-            preferredStyle: .actionSheet
-        )
+        let titulo = esInicio ? "Selecciona la fecha de inicio" : "Selecciona la fecha de fin"
+        let alert = UIAlertController(title: titulo, message: nil, preferredStyle: .alert)
+
+        let vc = UIViewController()
+        vc.preferredContentSize = CGSize(width: 300, height: 250)
 
         let datePicker = UIDatePicker()
         datePicker.datePickerMode = .date
+        datePicker.preferredDatePickerStyle = .wheels
+        datePicker.translatesAutoresizingMaskIntoConstraints = false
 
-        if #available(iOS 13.4, *) {
-            datePicker.preferredDatePickerStyle = .wheels
+        if esInicio {
+            datePicker.minimumDate = Date()
+        } else if let inicio = fechaInicioSeleccionada {
+            datePicker.minimumDate = inicio
         }
 
-        datePicker.translatesAutoresizingMaskIntoConstraints = false
-        alert.view.addSubview(datePicker)
+        vc.view.addSubview(datePicker)
 
         NSLayoutConstraint.activate([
-            datePicker.centerXAnchor.constraint(equalTo: alert.view.centerXAnchor),
-            datePicker.topAnchor.constraint(equalTo: alert.view.topAnchor, constant: 40),
+            datePicker.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor),
+            datePicker.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor),
+            datePicker.topAnchor.constraint(equalTo: vc.view.topAnchor),
+            datePicker.bottomAnchor.constraint(equalTo: vc.view.bottomAnchor)
         ])
 
-        let cancelar = UIAlertAction(title: "Cancelar", style: .cancel, handler: nil)
+        alert.setValue(vc, forKey: "contentViewController")
+
+        let cancelar = UIAlertAction(title: "Cancelar", style: .cancel)
 
         let aceptar = UIAlertAction(title: "Aceptar", style: .default) { _ in
             let fecha = datePicker.date
@@ -377,6 +356,13 @@ class SolicitarVacacionesViewController: UIViewController {
             if esInicio {
                 self.fechaInicioSeleccionada = fecha
                 self.inicioButton.setTitle("  Inicio: \(textoFecha)", for: .normal)
+
+                if let fin = self.fechaFinSeleccionada, fin < fecha {
+                    self.fechaFinSeleccionada = fecha
+                    let textoFin = self.dateFormatter.string(from: fecha)
+                    self.finButton.setTitle("  Fin: \(textoFin)", for: .normal)
+                }
+
             } else {
                 self.fechaFinSeleccionada = fecha
                 self.finButton.setTitle("  Fin: \(textoFecha)", for: .normal)
@@ -386,13 +372,7 @@ class SolicitarVacacionesViewController: UIViewController {
         alert.addAction(cancelar)
         alert.addAction(aceptar)
 
-        // Para iPad (evita crash)
-        if let popover = alert.popoverPresentationController {
-            popover.sourceView = esInicio ? inicioButton : finButton
-            popover.sourceRect = (esInicio ? inicioButton : finButton).bounds
-        }
-
-        present(alert, animated: true, completion: nil)
+        present(alert, animated: true)
     }
 
     @objc private func seleccionarFechaInicio() {
@@ -406,10 +386,84 @@ class SolicitarVacacionesViewController: UIViewController {
     // MARK: - Acciones
 
     @objc private func enviarSolicitud() {
-        let tipo = tipoSeleccionadoButton?.currentTitle ?? "Sin tipo seleccionado"
-        print("Solicitud enviada (aún sin backend) 🚀")
-        print("Inicio: \(String(describing: fechaInicioSeleccionada))")
-        print("Fin: \(String(describing: fechaFinSeleccionada))")
-        print("Tipo: \(tipo)")
+        guard let usuario = Sesion.shared.usuario else {
+            AppUtils.mostrarAlerta(en: self, titulo: "Error", mensaje: "No se pudo obtener la información del usuario.")
+            return
+        }
+        
+        guard let fechaInicio = fechaInicioSeleccionada else {
+            AppUtils.mostrarAlerta(en: self, titulo: "Campos incompletos", mensaje: "Por favor selecciona la fecha de inicio.")
+            return
+        }
+        
+        guard let fechaFin = fechaFinSeleccionada else {
+            AppUtils.mostrarAlerta(en: self, titulo: "Campos incompletos", mensaje: "Por favor selecciona la fecha de fin.")
+            return
+        }
+        
+        guard fechaFin > fechaInicio else {
+            AppUtils.mostrarAlerta(en: self, titulo: "Fechas inválidas", mensaje: "La fecha de fin debe ser posterior a la fecha de inicio.")
+            return
+        }
+        
+        guard let tipo = tipoSeleccionado else {
+            AppUtils.mostrarAlerta(en: self, titulo: "Campos incompletos", mensaje: "Por favor selecciona el tipo de vacaciones.")
+            return
+        }
+        
+        if let errorValidacion = ValidarSolicitudes.validar(tipo: tipo, fechaInicio: fechaInicio, fechaFin: fechaFin, fechaIngreso: usuario.fechaIngreso)
+        {
+            AppUtils.mostrarAlerta(en: self, titulo: "Error", mensaje: errorValidacion.localizedDescription)
+            return
+        }
+        
+        let motivo = motivoTextView.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        
+        let nuevaSolicitud = Solicitud(
+            id: UUID().uuidString,
+            usuarioId: usuario.id,
+            usuarioNombre: "\(usuario.nombre) \(usuario.apellido)",
+            areaId: usuario.areaId,
+            areaNombre: usuario.areaNombre,
+            fechaInicio: fechaInicio,
+            fechaFin: fechaFin,
+            tipoSolicitud: tipo,
+            motivo: motivo,
+            fechaCreacion: Date(),
+            fechaResolucion: nil,
+            estado: .pendiente,
+        )
+        
+        let loadingAlert = UIAlertController(title: nil, message: "Enviando solicitud...", preferredStyle: .alert)
+        let loadingIndicator = UIActivityIndicatorView(frame: CGRect(x: 10, y: 5, width: 50, height: 50))
+        loadingIndicator.hidesWhenStopped = true
+        loadingIndicator.style = .medium
+        loadingIndicator.startAnimating()
+        loadingAlert.view.addSubview(loadingIndicator)
+        present(loadingAlert, animated: true)
+        
+        solicitudService.crearSolicitud(nuevaSolicitud) { [weak self] error in
+            DispatchQueue.main.async {
+                loadingAlert.dismiss(animated: true) {
+                    guard let self = self else { return }
+                    
+                    if let error = error {
+                        AppUtils.mostrarAlerta(
+                            en: self,
+                            titulo: "Error",
+                            mensaje: "No se pudo enviar la solicitud: \(error.localizedDescription)"
+                        )
+                    } else {
+                        AppUtils.mostrarAlerta(
+                            en: self,
+                            titulo: "¡Solicitud enviada!",
+                            mensaje: "Tu solicitud de vacaciones ha sido registrada exitosamente."
+                        ) {
+                            self.navigationController?.popViewController(animated: true)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -209,12 +209,24 @@ class EditarEmpleadoViewController: UIViewController {
 
         usuarioService.actualizarUsuario(usuario) { [weak self] error in
             DispatchQueue.main.async {
+                guard let self = self else { return }
+
                 if let error = error {
-                    AppUtils.mostrarAlerta(en: self!, titulo: "Error", mensaje: "No se pudo guardar el usuario: \(error.localizedDescription)")
+                    AppUtils.mostrarAlerta(
+                        en: self,
+                        titulo: "Error",
+                        mensaje: "No se pudo guardar el usuario: \(error.localizedDescription)"
+                    )
                 } else {
-                    self?.onSave?(self!.usuario)
-                    
-                    AppUtils.mostrarAlerta(en: self!, titulo: "Éxito", mensaje: "Los datos fueron actualizados correctamente.")
+                    self.onSave?(self.usuario)
+
+                    AppUtils.mostrarAlerta(
+                        en: self,
+                        titulo: "Éxito",
+                        mensaje: "Los datos fueron actualizados correctamente."
+                    )
+
+                    self.navigationController?.popViewController(animated: true)
                 }
             }
         }

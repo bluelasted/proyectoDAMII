@@ -11,20 +11,23 @@ import Foundation
 enum TipoSolicitud: String, Codable, CaseIterable {
 
     case vacaciones
-    case vacacionesAdelantadas
-    case permiso
-    case licencia
+    case permisoPersonal
+    case licenciaMedica
+    case licenciaMaternidadPaternidad
+    case licenciaDuelo
 
     var titulo: String {
         switch self {
         case .vacaciones:
-            return "Vacaciones regulares"
-        case .vacacionesAdelantadas:
-            return "Vacaciones adelantadas"
-        case .permiso:
-            return "Permiso especial"
-        case .licencia:
-            return "Licencia"
+            return "Vacaciones"
+        case .permisoPersonal:
+            return "Permiso personal"
+        case .licenciaMedica:
+            return "Licencia médica"
+        case .licenciaMaternidadPaternidad:
+            return "Licencia por maternidad / paternidad"
+        case .licenciaDuelo:
+            return "Licencia por duelo"
         }
     }
 }

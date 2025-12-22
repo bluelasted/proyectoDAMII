@@ -3,10 +3,10 @@ import UIKit
 class DetalleSolicitudViewController: UIViewController {
 
     // Recibimos la solicitud desde la lista
-    private let solicitud: SolicitudesPendientesViewController.SolicitudPendiente
+    private let solicitud: Solicitud
 
     // Init personalizado
-    init(solicitud: SolicitudesPendientesViewController.SolicitudPendiente) {
+    init(solicitud: Solicitud) {
         self.solicitud = solicitud
         super.init(nibName: nil, bundle: nil)
     }
@@ -91,21 +91,28 @@ class DetalleSolicitudViewController: UIViewController {
             mainCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
         ])
 
-        // Icono
-        let iconView = UIImageView(image: UIImage(systemName: solicitud.icono))
+        // Icono según el tipo
+        let iconoNombre = obtenerIcono(para: solicitud.tipoSolicitud)
+        let iconView = UIImageView(image: UIImage(systemName: iconoNombre))
         iconView.tintColor = .systemBlue
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.widthAnchor.constraint(equalToConstant: 40).isActive = true
         iconView.heightAnchor.constraint(equalToConstant: 40).isActive = true
 
+        // Formatear fechas para el rango
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd MMM yyyy"
+        let fechaInicioStr = dateFormatter.string(from: solicitud.fechaInicio)
+        let fechaFinStr = dateFormatter.string(from: solicitud.fechaFin)
+
         // Labels principales
         let rangoLabel = UILabel()
-        rangoLabel.text = solicitud.rangoFechas
+        rangoLabel.text = "\(fechaInicioStr) - \(fechaFinStr)"
         rangoLabel.font = UIFont.systemFont(ofSize: 18, weight: .semibold)
         rangoLabel.textColor = .label
 
         let tipoLabel = UILabel()
-        tipoLabel.text = solicitud.tipo
+        tipoLabel.text = solicitud.tipoSolicitud.titulo
         tipoLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         tipoLabel.textColor = .secondaryLabel
 
@@ -113,10 +120,12 @@ class DetalleSolicitudViewController: UIViewController {
         headerTextStack.axis = .vertical
         headerTextStack.spacing = 2
 
-        let estadoColor: UIColor = (solicitud.estado == "En revisión") ? .systemBlue : .systemOrange
+        // Estado
+        let estadoColor = obtenerColorEstado()
+        let estadoTexto = obtenerTextoEstado()
 
         let estadoLabel = UILabel()
-        estadoLabel.text = "  \(solicitud.estado)  "
+        estadoLabel.text = "  \(estadoTexto)  "
         estadoLabel.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
         estadoLabel.textColor = .white
         estadoLabel.backgroundColor = estadoColor
@@ -150,22 +159,55 @@ class DetalleSolicitudViewController: UIViewController {
             separator.heightAnchor.constraint(equalToConstant: 1)
         ])
 
+        // Formatear fecha de creación
+        let fechaCreacionStr = dateFormatter.string(from: solicitud.fechaCreacion)
+
+        // Calcular días de duración
+        let dias = Calendar.current.dateComponents([.day], from: solicitud.fechaInicio, to: solicitud.fechaFin).day ?? 0
+        let duracionTexto = "\(dias + 1) día(s)"
+
         // Labels de detalle
-        let enviadoTitulo = crearLabelTitulo("Enviada el")
-        let enviadoValor  = crearLabelValor(solicitud.enviadoEl)
+        var detalleViews: [UIView] = []
+        
+        detalleViews.append(crearLabelTitulo("Solicitante"))
+        detalleViews.append(crearLabelValor(solicitud.usuarioNombre))
+        
+        detalleViews.append(crearLabelTitulo("Área"))
+        detalleViews.append(crearLabelValor(solicitud.areaNombre))
+        
+        detalleViews.append(crearLabelTitulo("Enviada el"))
+        detalleViews.append(crearLabelValor(fechaCreacionStr))
+        
+        detalleViews.append(crearLabelTitulo("Duración"))
+        detalleViews.append(crearLabelValor(duracionTexto))
+        
+        detalleViews.append(crearLabelTitulo("Tipo de solicitud"))
+        detalleViews.append(crearLabelValor(solicitud.tipoSolicitud.titulo))
 
-        let tipoTitulo = crearLabelTitulo("Tipo de vacaciones")
-        let tipoValor  = crearLabelValor(solicitud.tipo)
+        // Motivo
+        if !solicitud.motivo.isEmpty {
+            detalleViews.append(crearLabelTitulo("Motivo"))
+            let motivoValor = crearLabelValor(solicitud.motivo)
+            motivoValor.numberOfLines = 0
+            detalleViews.append(motivoValor)
+        }
 
-        let motivoTitulo = crearLabelTitulo("Motivo")
-        let motivoValor  = crearLabelValor(solicitud.motivo)
-        motivoValor.numberOfLines = 0
+        // Observaciones (si existen)
+        if let observaciones = solicitud.observaciones, !observaciones.isEmpty {
+            detalleViews.append(crearLabelTitulo("Observaciones"))
+            let obsValor = crearLabelValor(observaciones)
+            obsValor.numberOfLines = 0
+            detalleViews.append(obsValor)
+        }
 
-        let detailStack = UIStackView(arrangedSubviews: [
-            enviadoTitulo, enviadoValor,
-            tipoTitulo, tipoValor,
-            motivoTitulo, motivoValor
-        ])
+        // Fecha de resolución (si existe)
+        if let fechaResolucion = solicitud.fechaResolucion {
+            let fechaResolucionStr = dateFormatter.string(from: fechaResolucion)
+            detalleViews.append(crearLabelTitulo("Resuelta el"))
+            detalleViews.append(crearLabelValor(fechaResolucionStr))
+        }
+
+        let detailStack = UIStackView(arrangedSubviews: detalleViews)
         detailStack.axis = .vertical
         detailStack.spacing = 6
         detailStack.translatesAutoresizingMaskIntoConstraints = false
@@ -179,23 +221,30 @@ class DetalleSolicitudViewController: UIViewController {
             detailStack.bottomAnchor.constraint(equalTo: mainCard.bottomAnchor, constant: -16)
         ])
 
-        // Botón inferior (placeholder)
-        let footerButton = UIButton(type: .system)
-        footerButton.setTitle("Ver más opciones", for: .normal)
-        footerButton.setImage(UIImage(systemName: "ellipsis.circle"), for: .normal)
-        footerButton.tintColor = .systemBlue
-        footerButton.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
-        footerButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: -4, bottom: 0, right: 4)
-        footerButton.translatesAutoresizingMaskIntoConstraints = false
-        footerButton.addTarget(self, action: #selector(tocarOpciones), for: .touchUpInside)
+        // Botón inferior solo si está pendiente
+        if solicitud.estado == .pendiente {
+            let footerButton = UIButton(type: .system)
+            footerButton.setTitle("Cancelar solicitud", for: .normal)
+            footerButton.setImage(UIImage(systemName: "xmark.circle"), for: .normal)
+            footerButton.tintColor = .systemRed
+            footerButton.titleLabel?.font = UIFont.systemFont(ofSize: 15, weight: .medium)
+            footerButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: -4, bottom: 0, right: 4)
+            footerButton.translatesAutoresizingMaskIntoConstraints = false
+            footerButton.addTarget(self, action: #selector(cancelarSolicitud), for: .touchUpInside)
 
-        contentView.addSubview(footerButton)
+            contentView.addSubview(footerButton)
 
-        NSLayoutConstraint.activate([
-            footerButton.topAnchor.constraint(equalTo: mainCard.bottomAnchor, constant: 24),
-            footerButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            footerButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
-        ])
+            NSLayoutConstraint.activate([
+                footerButton.topAnchor.constraint(equalTo: mainCard.bottomAnchor, constant: 24),
+                footerButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+                footerButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
+            ])
+        } else {
+            // Si no hay botón, cerrar el constraint del mainCard al bottom
+            NSLayoutConstraint.activate([
+                mainCard.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
+            ])
+        }
     }
 
     private func crearLabelTitulo(_ texto: String) -> UILabel {
@@ -214,8 +263,86 @@ class DetalleSolicitudViewController: UIViewController {
         return label
     }
 
-    @objc private func tocarOpciones() {
-        print("Más opciones para la solicitud: \(solicitud.rangoFechas)")
+    // MARK: - Helpers
+
+    private func obtenerIcono(para tipo: TipoSolicitud) -> String {
+        switch tipo {
+        case .vacaciones:
+            return "airplane"
+        case .permisoPersonal:
+            return "person.badge.clock"
+        case .licenciaMedica:
+            return "stethoscope"
+        case .licenciaMaternidadPaternidad:
+            return "figure.and.child.holdinghands"
+        case .licenciaDuelo:
+            return "heart.fill"
+        }
+    }
+
+    private func obtenerColorEstado() -> UIColor {
+        switch solicitud.estado {
+        case .pendiente:
+            return .systemOrange
+        case .aprobada:
+            return .systemGreen
+        case .rechazada:
+            return .systemRed
+        case .anulada:
+            return .systemGray
+        }
+    }
+
+    private func obtenerTextoEstado() -> String {
+        switch solicitud.estado {
+        case .pendiente:
+            return "Pendiente"
+        case .aprobada:
+            return "Aprobada"
+        case .rechazada:
+            return "Rechazada"
+        case .anulada:
+            return "Anulada"
+        }
+    }
+
+    @objc private func cancelarSolicitud() {
+        let alert = UIAlertController(
+            title: "¿Cancelar solicitud?",
+            message: "Esta acción no se puede deshacer. La solicitud será marcada como anulada.",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "No", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Sí, cancelar", style: .destructive) { [weak self] _ in
+            guard let self = self else { return }
+            
+            // Aquí puedes implementar la lógica para anular la solicitud en Firebase
+            let solicitudService = SolicitudService()
+            solicitudService.actualizarEstadoSolicitud(
+                solicitudId: self.solicitud.id,
+                nuevoEstado: .anulada
+            ) { error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        AppUtils.mostrarAlerta(
+                            en: self,
+                            titulo: "Error",
+                            mensaje: "No se pudo cancelar la solicitud: \(error.localizedDescription)"
+                        )
+                    } else {
+                        AppUtils.mostrarAlerta(
+                            en: self,
+                            titulo: "Solicitud cancelada",
+                            mensaje: "Tu solicitud ha sido anulada exitosamente."
+                        ) {
+                            self.navigationController?.popViewController(animated: true)
+                        }
+                    }
+                }
+            }
+        })
+        
+        present(alert, animated: true)
     }
 }
-

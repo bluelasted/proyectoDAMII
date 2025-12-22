@@ -1,14 +1,18 @@
 import UIKit
 
 class HistorialVacacionesViewController: UIViewController {
+    private let solicitudService = SolicitudService()
+    private var solicitudes: [Solicitud] = []
+    private var stackSolicitudes: UIStackView!
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         view.backgroundColor = .systemBackground
         title = "Historial"
-            configurarBotonAtras()
+        configurarBotonAtras()
         setupUI()
+        cargarHistorial()
     }
     
      override func viewWillAppear(_ animated: Bool) {
@@ -57,7 +61,7 @@ class HistorialVacacionesViewController: UIViewController {
         ])
 
         let headerLabel = UILabel()
-        headerLabel.text = "Historial de vacaciones"
+        headerLabel.text = "Historial de solicitudes"
         headerLabel.font = UIFont.systemFont(ofSize: 20, weight: .bold)
         headerLabel.textColor = .label
         headerLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -70,33 +74,31 @@ class HistorialVacacionesViewController: UIViewController {
             headerLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
         ])
 
-        let stack = UIStackView()
-        stack.axis = .vertical
-        stack.spacing = 12
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
+        stackSolicitudes = UIStackView()
+        stackSolicitudes.axis = .vertical
+        stackSolicitudes.spacing = 12
+        stackSolicitudes.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(stackSolicitudes)
 
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 18),
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
+            stackSolicitudes.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 18),
+            stackSolicitudes.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            stackSolicitudes.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            stackSolicitudes.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
         ])
+    }
+    
+    @objc private func tapSolicitud(_ sender: UITapGestureRecognizer) {
+        guard let card = sender.view else { return }
+        let index = card.tag
 
-        stack.addArrangedSubview(crearRegistro(titulo: "15 - 20 Enero 2025",
-                                               detalle: "Vacaciones anuales",
-                                               icono: "checkmark.circle.fill"))
+        guard index >= 0, index < solicitudes.count else { return }
 
-        stack.addArrangedSubview(crearRegistro(titulo: "05 Abril 2025",
-                                               detalle: "Día personal",
-                                               icono: "checkmark.circle.fill"))
-
-        stack.addArrangedSubview(crearRegistro(titulo: "01 - 03 Agosto 2025",
-                                               detalle: "Viaje familiar",
-                                               icono: "checkmark.circle.fill"))
+        let solicitud = solicitudes[index]
+        verDetalleSolicitud(solicitud)
     }
 
-    private func crearRegistro(titulo: String, detalle: String, icono: String) -> UIView {
+    private func crearRegistro(solicitud: Solicitud, titulo: String, detalle: String, icono: String, estado: EstadoSolicitud) -> UIView {
         let card = UIView()
         card.backgroundColor = .secondarySystemGroupedBackground
         card.layer.cornerRadius = 14
@@ -108,7 +110,7 @@ class HistorialVacacionesViewController: UIViewController {
         card.heightAnchor.constraint(equalToConstant: 70).isActive = true
 
         let iconView = UIImageView(image: UIImage(systemName: icono))
-        iconView.tintColor = .systemGreen
+        iconView.tintColor = estado == .aprobada ? .systemGreen : .systemRed
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
         let titleLabel = UILabel()
@@ -141,8 +143,82 @@ class HistorialVacacionesViewController: UIViewController {
             hStack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
             hStack.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14)
         ])
+        
+        let tap = UITapGestureRecognizer(target: self, action: #selector(tapSolicitud(_:)))
+        card.addGestureRecognizer(tap)
+        card.isUserInteractionEnabled = true
+
+        card.tag = solicitudes.firstIndex(where: { $0.id == solicitud.id }) ?? -1
 
         return card
     }
-}
+    
+    private func cargarHistorial() {
+        solicitudService.obtenerSolicitudes { [weak self] solicitudes, error in
+            guard let self = self else { return }
 
+            if let error = error {
+                AppUtils.mostrarAlerta(
+                    en: self,
+                    titulo: "Error",
+                    mensaje: error.localizedDescription
+                )
+                return
+            }
+
+            self.solicitudes = (solicitudes ?? []).filter {
+                $0.estado != .pendiente
+            }
+
+            self.renderizarHistorial()
+        }
+    }
+    
+    private func formatearRango(inicio: Date, fin: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd MMM yyyy"
+
+        if Calendar.current.isDate(inicio, inSameDayAs: fin) {
+            return formatter.string(from: inicio)
+        }
+
+        return "\(formatter.string(from: inicio)) - \(formatter.string(from: fin))"
+    }
+    
+    private func renderizarHistorial() {
+        stackSolicitudes.arrangedSubviews.forEach { $0.removeFromSuperview() }
+
+        if solicitudes.isEmpty {
+            let label = UILabel()
+            label.text = "No hay solicitudes en el historial"
+            label.textAlignment = .center
+            label.textColor = .secondaryLabel
+            stackSolicitudes.addArrangedSubview(label)
+            return
+        }
+
+        for solicitud in solicitudes {
+            let icono = solicitud.estado == .aprobada
+                ? "checkmark.seal.fill"
+                : "xmark.seal.fill"
+
+            let card = crearRegistro(
+                solicitud: solicitud,
+                titulo: formatearRango(
+                    inicio: solicitud.fechaInicio,
+                    fin: solicitud.fechaFin
+                ),
+                detalle: solicitud.motivo,
+                icono: icono,
+                estado: solicitud.estado
+            )
+
+            stackSolicitudes.addArrangedSubview(card)
+        }
+    }
+    
+    private func verDetalleSolicitud(_ solicitud: Solicitud) {
+        let detalleVC = DetalleSolicitudViewController(solicitud: solicitud)
+        navigationController?.pushViewController(detalleVC, animated: true)
+    }
+}
