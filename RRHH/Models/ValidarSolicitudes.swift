@@ -8,45 +8,61 @@
 
 import Foundation
 
-// MARK: - Errores de validación
-
 enum ValidacionSolicitudError: LocalizedError {
-
     case antiguedadInsuficiente(String)
     case anticipacionInsuficiente(String)
     case duracionInvalida(String)
+    case fechaInvalida(String)
 
     var errorDescription: String? {
         switch self {
         case .antiguedadInsuficiente(let msg),
              .anticipacionInsuficiente(let msg),
-             .duracionInvalida(let msg):
+             .duracionInvalida(let msg),
+             .fechaInvalida(let msg):
             return msg
         }
     }
 }
 
-// MARK: - Validador de solicitudes
-
 struct ValidarSolicitudes {
 
-    static func validar(tipo: TipoSolicitud, fechaInicio: Date, fechaFin: Date, fechaIngreso: Date
+    static func validar(
+        tipo: TipoSolicitud,
+        fechaInicio: Date,
+        fechaFin: Date,
+        fechaIngreso: Date
     ) -> ValidacionSolicitudError? {
 
         let calendar = Calendar.current
-        let hoy = Date()
+        let hoy = calendar.startOfDay(for: Date())
+        let inicioNormalizado = calendar.startOfDay(for: fechaInicio)
+        let finNormalizado = calendar.startOfDay(for: fechaFin)
+        let ingresoNormalizado = calendar.startOfDay(for: fechaIngreso)
 
-        let duracion = calendar.dateComponents([.day], from: fechaInicio, to: fechaFin).day ?? 0
-        let diasAnticipacion = calendar.dateComponents([.day], from: hoy, to: fechaInicio).day ?? 0
-        
-        if fechaFin < fechaInicio {
-            return .duracionInvalida("La fecha de fin no puede ser menor a la fecha de inicio.")
+        if ingresoNormalizado > hoy {
+            return .fechaInvalida("La fecha de ingreso no puede ser futura.")
         }
+
+        if finNormalizado < inicioNormalizado {
+            return .fechaInvalida("La fecha de fin no puede ser anterior a la fecha de inicio.")
+        }
+
+        if tipo != .licenciaMedica && inicioNormalizado < hoy {
+            return .anticipacionInsuficiente("No puedes crear solicitudes con fecha de inicio en el pasado.")
+        }
+
+        let duracion = calendar.dateComponents([.day], from: inicioNormalizado, to: finNormalizado).day! + 1
+        let diasAnticipacion = calendar.dateComponents([.day], from: hoy, to: inicioNormalizado).day ?? 0
 
         switch tipo {
 
         case .vacaciones:
-            if calendar.date(byAdding: .year, value: 1, to: fechaIngreso)! > hoy {
+            guard let unAnioDespues = calendar.date(byAdding: .year, value: 1, to: ingresoNormalizado) else {
+                return .fechaInvalida("Error al calcular la antigüedad.")
+            }
+            
+            if unAnioDespues > hoy {
                 return .antiguedadInsuficiente(
                     "Debes tener al menos 1 año de antigüedad para solicitar vacaciones."
                 )
@@ -60,7 +76,7 @@ struct ValidarSolicitudes {
 
             if duracion < 15 || duracion > 30 {
                 return .duracionInvalida(
-                    "Las vacaciones deben durar entre 15 y 30 días."
+                    "Las vacaciones deben durar entre 15 y 30 días. Duración solicitada: \(duracion) días."
                 )
             }
 
@@ -73,21 +89,34 @@ struct ValidarSolicitudes {
 
             if duracion < 1 || duracion > 3 {
                 return .duracionInvalida(
-                    "El permiso personal puede durar hasta 3 días."
+                    "El permiso personal puede durar entre 1 y 3 días. Duración solicitada: \(duracion) días."
                 )
             }
 
         case .licenciaMedica:
+            if inicioNormalizado < hoy {
+                let diasAtras = calendar.dateComponents([.day], from: inicioNormalizado, to: hoy).day ?? 0
+                if diasAtras > 7 {
+                    return .anticipacionInsuficiente(
+                        "La licencia médica no puede iniciarse más de 7 días en el pasado."
+                    )
+                }
+            }
+
             if duracion < 1 || duracion > 30 {
                 return .duracionInvalida(
-                    "La licencia médica puede durar hasta 30 días."
+                    "La licencia médica puede durar entre 1 y 30 días. Duración solicitada: \(duracion) días."
                 )
             }
 
         case .licenciaMaternidadPaternidad:
-            if calendar.date(byAdding: .month, value: 6, to: fechaIngreso)! > hoy {
+            guard let seisMesesDespues = calendar.date(byAdding: .month, value: 6, to: ingresoNormalizado) else {
+                return .fechaInvalida("Error al calcular la antigüedad.")
+            }
+            
+            if seisMesesDespues > hoy {
                 return .antiguedadInsuficiente(
-                    "Debes tener al menos 6 meses de antigüedad para esta licencia."
+                    "Debes tener al menos 6 meses de antigüedad para solicitar esta licencia."
                 )
             }
 
@@ -99,14 +128,14 @@ struct ValidarSolicitudes {
 
             if duracion != 90 {
                 return .duracionInvalida(
-                    "La licencia por maternidad o paternidad tiene una duración de 90 días."
+                    "La licencia por maternidad o paternidad debe tener una duración de 90 días. Duración solicitada: \(duracion) días."
                 )
             }
 
         case .licenciaDuelo:
             if duracion != 5 {
                 return .duracionInvalida(
-                    "La licencia por duelo tiene una duración de 5 días."
+                    "La licencia por duelo debe tener una duración de 5 días. Duración solicitada: \(duracion) días."
                 )
             }
         }
@@ -114,4 +143,3 @@ struct ValidarSolicitudes {
         return nil
     }
 }
-

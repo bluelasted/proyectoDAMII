@@ -165,14 +165,11 @@ class DetalleSolicitudViewController: UIViewController {
             separator.heightAnchor.constraint(equalToConstant: 1)
         ])
 
-        // Formatear fecha de creación
         let fechaCreacionStr = dateFormatter.string(from: solicitud.fechaCreacion)
 
-        // Calcular días de duración
         let dias = Calendar.current.dateComponents([.day], from: solicitud.fechaInicio, to: solicitud.fechaFin).day ?? 0
         let duracionTexto = "\(dias + 1) día(s)"
 
-        // Labels de detalle
         var detalleViews: [UIView] = []
         
         detalleViews.append(crearLabelTitulo("Solicitante"))
@@ -198,7 +195,6 @@ class DetalleSolicitudViewController: UIViewController {
             detalleViews.append(motivoValor)
         }
 
-        // Observaciones (si existen)
         if let observaciones = solicitud.observaciones, !observaciones.isEmpty {
             detalleViews.append(crearLabelTitulo("Observaciones"))
             let obsValor = crearLabelValor(observaciones)
@@ -206,7 +202,6 @@ class DetalleSolicitudViewController: UIViewController {
             detalleViews.append(obsValor)
         }
 
-        // Fecha de resolución (si existe)
         if let fechaResolucion = solicitud.fechaResolucion {
             let fechaResolucionStr = dateFormatter.string(from: fechaResolucion)
             detalleViews.append(crearLabelTitulo("Resuelta el"))
@@ -251,7 +246,6 @@ class DetalleSolicitudViewController: UIViewController {
                 footerButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
             ])
         } else {
-            // Si no hay botón, cerrar el constraint del mainCard al bottom
             NSLayoutConstraint.activate([
                 mainCard.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24)
             ])
@@ -328,7 +322,6 @@ class DetalleSolicitudViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "Sí, cancelar", style: .destructive) { [weak self] _ in
             guard let self = self else { return }
             
-            // Aquí puedes implementar la lógica para anular la solicitud en Firebase
             let solicitudService = SolicitudService()
             solicitudService.actualizarEstadoSolicitud(
                 solicitudId: self.solicitud.id,
